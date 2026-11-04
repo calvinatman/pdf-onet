@@ -14,6 +14,7 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)
         )
-        setContent { PdfOnetTheme { PdfOnetApp() } }
+        val s = AppSettings(applicationContext)
+        setContent { PdfOnetTheme(s) { PdfOnetApp(s) } }
     }
 }
