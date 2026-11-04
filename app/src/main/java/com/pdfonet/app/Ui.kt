@@ -387,14 +387,14 @@ fun SaveFolderRow(s: AppSettings) {
                     uri, Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
                 )
             } catch (e: Exception) { }
-            s.setTree(uri.toString())
+            s.updateTree(uri.toString())
         }
     }
     SettingsRow("Save folder", folderLabel(s.tree) + " \u203A") { ask = true }
     if (ask) {
         PickerDialog(
             "Save folder", listOf("Choose folder...", "Use default (Downloads/PDF ONET)"), "",
-            { if (it.startsWith("Choose")) pick.launch(null) else s.setTree(null) },
+            { if (it.startsWith("Choose")) pick.launch(null) else s.updateTree(null) },
             { ask = false }
         )
     }

@@ -81,12 +81,12 @@ class AppSettings(ctx: Context) {
     )
         private set
 
-    fun setTheme(v: String) { theme = v; sp.edit().putString("theme", v).apply() }
-    fun setAccent(v: String) { accent = v; sp.edit().putString("accent", v).apply() }
+    fun updateTheme(v: String) { theme = v; sp.edit().putString("theme", v).apply() }
+    fun updateAccent(v: String) { accent = v; sp.edit().putString("accent", v).apply() }
     fun setAfter(v: String) { afterConvert = v; sp.edit().putString("after", v).apply() }
     fun setClean(v: Int) { autoClean = v; sp.edit().putInt("clean", v).apply() }
-    fun setPro(v: Boolean) { pro = v; sp.edit().putBoolean("pro", v).apply() }
-    fun setTree(v: String?) {
+    fun updatePro(v: Boolean) { pro = v; sp.edit().putBoolean("pro", v).apply() }
+    fun updateTree(v: String?) {
         tree = v
         val e = sp.edit()
         if (v == null) e.remove("tree") else e.putString("tree", v)

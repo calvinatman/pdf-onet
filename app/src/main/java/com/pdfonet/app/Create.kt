@@ -61,7 +61,7 @@ fun CreateScreen(ed: EditorState, s: AppSettings, goHome: () -> Unit, onResult: 
             val r = readTextFrom(ctx, uri)
             if (r != null) {
                 ed.load(r.second)
-                if (r.first.endsWith(".md", true)) s.setPro(true)
+                if (r.first.endsWith(".md", true)) s.updatePro(true)
                 toast(ctx, "Loaded into editor")
                 goHome()
             } else toast(ctx, "Could not read file")
@@ -159,7 +159,7 @@ fun TemplatesScreen(ed: EditorState, s: AppSettings, onBack: () -> Unit, goHome:
             text = { Text(if (own) "Use it, rename, export or delete." else "Built-in template.") },
             confirmButton = {
                 Column {
-                    TextButton(onClick = { ed.load(t.body); s.setPro(true); act = null; goHome() }) { Text("Use (open in editor)", color = CAccent) }
+                    TextButton(onClick = { ed.load(t.body); s.updatePro(true); act = null; goHome() }) { Text("Use (open in editor)", color = CAccent) }
                     if (own) {
                         TextButton(onClick = { nameDlg = "rename" }) { Text("Rename", color = CAccent) }
                         TextButton(onClick = { exportT = t; act = null; export.launch(t.name + ".md") }) { Text("Export", color = CAccent) }

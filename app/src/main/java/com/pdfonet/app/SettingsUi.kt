@@ -55,7 +55,7 @@ fun SettingsScreen(s: AppSettings, onLegal: (String, String) -> Unit, onClearHis
                         Box(
                             Modifier.size(30.dp).clip(CircleShape).background(Color(v))
                                 .then(if (on) Modifier.border(3.dp, CTxt, CircleShape) else Modifier)
-                                .clickable { s.setAccent(n) }
+                                .clickable { s.updateAccent(n) }
                         )
                     }
                 }
@@ -90,7 +90,7 @@ fun SettingsScreen(s: AppSettings, onLegal: (String, String) -> Unit, onClearHis
 
     StyleDialogs(dlg, s) { dlg = null }
     when (dlg) {
-        "theme" -> PickerDialog("Theme", listOf("Dark", "Light", "System"), s.theme, { s.setTheme(it) }, { dlg = null })
+        "theme" -> PickerDialog("Theme", listOf("Dark", "Light", "System"), s.theme, { s.updateTheme(it) }, { dlg = null })
         "after" -> PickerDialog("After convert", listOf("Result screen", "Open PDF directly"), s.afterConvert, { s.setAfter(it) }, { dlg = null })
         "clean" -> PickerDialog(
             "Auto-clean (deletes PDFs older than this, favorites kept)",

@@ -96,7 +96,7 @@ fun HomeScreen(ed: EditorState, s: AppSettings, onOptions: () -> Unit, onResult:
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text("Pro", color = CTxt, fontWeight = FontWeight.SemiBold)
                 Spacer(Modifier.width(8.dp))
-                Switch(checked = s.pro, onCheckedChange = { s.setPro(it); preview = false }, colors = switchColors())
+                Switch(checked = s.pro, onCheckedChange = { s.updatePro(it); preview = false }, colors = switchColors())
             }
         }
         if (s.pro) {
