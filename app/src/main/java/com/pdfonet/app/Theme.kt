@@ -51,22 +51,21 @@ fun applyPalette(theme: String, systemDark: Boolean, chosen: Color) {
             CMuted = Color(0xFF9A9A9A); CTxt = Color(0xFFF5F5F5); CNav = Color(0xFF111111)
         }
         theme == "Orange" -> {
-            CBg = Color(0xFF1C0F08); CCard = Color(0xFF2A170C); CLine = Color(0xFF4A2A18)
-            CMuted = Color(0xFFD2A58A); CTxt = Color(0xFFFFF1E8); CNav = Color(0xFF331B0E)
+            CBg = Color(0xFF241000); CCard = Color(0xFF3B1900); CLine = Color(0xFF713000)
+            CMuted = Color(0xFFF0A66D); CTxt = Color(0xFFFFF3E8); CNav = Color(0xFF4B2000)
         }
         theme == "Red" -> {
-            CBg = Color(0xFF1E0A0C); CCard = Color(0xFF2C1013); CLine = Color(0xFF54212A)
-            CMuted = Color(0xFFD6A0A6); CTxt = Color(0xFFFFECEE); CNav = Color(0xFF36141A)
+            CBg = Color(0xFF2A0509); CCard = Color(0xFF450B13); CLine = Color(0xFF781B29)
+            CMuted = Color(0xFFEBA0AA); CTxt = Color(0xFFFFF0F1); CNav = Color(0xFF560F1A)
         }
         else -> {
             CBg = Color(0xFF121212); CCard = Color(0xFF1E1E1E); CLine = Color(0xFF2E2E2E)
             CMuted = Color(0xFFA0A0A0); CTxt = Color(0xFFF2F2F2); CNav = Color(0xFF262626)
         }
     }
-    var acc = chosen
-    if (contrast(acc, CBg) < 2.2f) acc = if (dark) Color.White else Color.Black
-    CAccent = acc
-    COnAccent = if (acc.luminance() > 0.4f) Color(0xFF121212) else Color.White
+    // Keep the user's selected accent unchanged across every theme.
+    CAccent = chosen
+    COnAccent = if (chosen.luminance() > 0.4f) Color(0xFF121212) else Color.White
 }
 
 @Composable

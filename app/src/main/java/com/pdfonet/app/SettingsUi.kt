@@ -62,7 +62,7 @@ fun SettingsScreen(s: AppSettings, onLegal: (String, String) -> Unit, onClearHis
                     }
                 }
                 Text(
-                    "White and Black switch automatically if they would be invisible on the theme.",
+                    "Your selected accent stays unchanged when you switch themes.",
                     color = CMuted, fontSize = 12.sp
                 )
             }
