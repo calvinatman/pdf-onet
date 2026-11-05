@@ -54,9 +54,9 @@ data class PdfStyle(
 class AppSettings(ctx: Context) {
     private val sp = ctx.getSharedPreferences("pdfonet", Context.MODE_PRIVATE)
 
-    var theme by mutableStateOf(sp.getString("theme", "Dark") ?: "Dark")
+    var theme by mutableStateOf((sp.getString("theme", "Light") ?: "Light").let { if (it == "Orange" || it == "Red") "Light" else it })
         private set
-    var accent by mutableStateOf(sp.getString("accent", "Orange") ?: "Orange")
+    var accent by mutableStateOf(sp.getString("accent", "Black") ?: "Black")
         private set
     var afterConvert by mutableStateOf(sp.getString("after", "Result screen") ?: "Result screen")
         private set
@@ -72,7 +72,7 @@ class AppSettings(ctx: Context) {
         private set
     var onboarded by mutableStateOf(sp.getBoolean("onboarded", false))
         private set
-    var pins by mutableStateOf<Set<String>>(sp.getStringSet("pins", emptySet())?.toSet() ?: emptySet())
+    var pins by mutableStateOf<Set<String>>(sp.getStringSet("pins", setOf("text", "templates"))?.toSet() ?: setOf("text", "templates"))
         private set
     var style by mutableStateOf(
         PdfStyle(
@@ -124,8 +124,8 @@ class AppSettings(ctx: Context) {
 
     fun resetAll() {
         sp.edit().clear().putBoolean("onboarded", true).apply()
-        theme = "Dark"; accent = "Orange"; afterConvert = "Result screen"
+        theme = "Light"; accent = "Black"; afterConvert = "Result screen"
         autoClean = 0; tree = null; pro = false; anim = true; haptic = true
-        pins = emptySet(); style = PdfStyle()
+        pins = setOf("text", "templates"); style = PdfStyle()
     }
 }

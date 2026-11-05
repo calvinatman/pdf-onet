@@ -25,13 +25,7 @@ var CNav by mutableStateOf(Color(0xFF262626))
 var CAccent by mutableStateOf(Color(0xFFFF7A3D))
 var COnAccent by mutableStateOf(Color(0xFF121212))
 
-val ThemeNames = listOf("Dark", "Light", "System", "Black", "Orange", "Red")
-
-private fun contrast(a: Color, b: Color): Float {
-    val la = a.luminance()
-    val lb = b.luminance()
-    return (maxOf(la, lb) + 0.05f) / (minOf(la, lb) + 0.05f)
-}
+val ThemeNames = listOf("Dark", "Light", "System", "Black")
 
 fun isDarkTheme(theme: String, systemDark: Boolean): Boolean = when (theme) {
     "Light" -> false
@@ -49,14 +43,6 @@ fun applyPalette(theme: String, systemDark: Boolean, chosen: Color) {
         theme == "Black" -> {
             CBg = Color(0xFF000000); CCard = Color(0xFF0E0E0E); CLine = Color(0xFF222222)
             CMuted = Color(0xFF9A9A9A); CTxt = Color(0xFFF5F5F5); CNav = Color(0xFF111111)
-        }
-        theme == "Orange" -> {
-            CBg = Color(0xFF241000); CCard = Color(0xFF3B1900); CLine = Color(0xFF713000)
-            CMuted = Color(0xFFF0A66D); CTxt = Color(0xFFFFF3E8); CNav = Color(0xFF4B2000)
-        }
-        theme == "Red" -> {
-            CBg = Color(0xFF2A0509); CCard = Color(0xFF450B13); CLine = Color(0xFF781B29)
-            CMuted = Color(0xFFEBA0AA); CTxt = Color(0xFFFFF0F1); CNav = Color(0xFF560F1A)
         }
         else -> {
             CBg = Color(0xFF121212); CCard = Color(0xFF1E1E1E); CLine = Color(0xFF2E2E2E)
