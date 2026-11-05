@@ -1,11 +1,14 @@
 package com.pdfonet.app
 
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -13,25 +16,24 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.PathFillType
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.graphics.drawscope.Fill
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.drawscope.withTransform
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -70,12 +72,23 @@ val Icons24: Map<String, String> = mapOf(
     "home" to "M3 11L12 3l9 8 M5 10v10h14V10 M10 20v-6h4v6",
     "folder" to "M3 6h6l2 2h10v11H3z",
     "gear" to "M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0 M20 12a8 8 0 1 1-16 0 8 8 0 0 1 16 0",
-    "star" to "M12 3l2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 17l-5.4 2.8 1.1-6.1L3.2 9.4l6.1-.8z"
+    "star" to "M12 3l2.7 5.6 6.1.8-4.5 4.3 1.1 6.1L12 17l-5.4 2.8 1.1-6.1L3.2 9.4l6.1-.8z",
+    "chevL" to "M15 5l-7 7 7 7",
+    "chevR" to "M9 5l7 7-7 7",
+    "check" to "M5 12l5 5 9-10",
+    "close" to "M6 6l12 12 M18 6L6 18",
+    "arrow" to "M5 12h14 M13 6l6 6-6 6"
 )
+
+private val pathCache = HashMap<String, Path>()
+
+fun iconPath(name: String): Path = pathCache.getOrPut(name) {
+    PathParser().parsePathString(Icons24[name] ?: "M0 0").toPath()
+}
 
 @Composable
 fun SvgIcon(name: String, color: Color, dim: Dp = 24.dp, filled: Boolean = false) {
-    val path = remember(name) { PathParser().parsePathString(Icons24[name] ?: "M0 0").toPath() }
+    val path = iconPath(name)
     val dashed = name == "gear"
     Canvas(Modifier.size(dim)) {
         val k = this.size.width / 24f
@@ -96,12 +109,17 @@ fun SvgIcon(name: String, color: Color, dim: Dp = 24.dp, filled: Boolean = false
 }
 
 @Composable
-fun IconBtn(name: String, label: String, onClick: () -> Unit) {
+fun IconBtnTint(name: String, label: String, tint: Color, onClick: () -> Unit) {
     Box(
         Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onClick)
             .semantics { contentDescription = label },
         contentAlignment = Alignment.Center
-    ) { SvgIcon(name, CTxt, 22.dp) }
+    ) { SvgIcon(name, tint, 22.dp) }
+}
+
+@Composable
+fun IconBtn(name: String, label: String, onClick: () -> Unit) {
+    IconBtnTint(name, label, CTxt, onClick)
 }
 
 @Composable
@@ -132,20 +150,23 @@ fun FilterChipX(label: String, on: Boolean, onClick: () -> Unit) {
 }
 
 @Composable
-fun AppLogo(dim: Dp) {
-    val p = remember {
-        PathParser().parsePathString("M38 20H68L80 32V54L66 68H52V82H38Z M52 34V54H62L66 50V38L62 34Z")
-            .toPath().apply { fillType = PathFillType.EvenOdd }
+fun Wordmark(h: Dp) {
+    val onDark = CBg.luminance() < 0.5f
+    val img: @Composable () -> Unit = {
+        Image(
+            painter = painterResource(R.drawable.wordmark),
+            contentDescription = "PDio",
+            contentScale = ContentScale.Fit,
+            modifier = Modifier.height(h).aspectRatio(420f / 196f)
+        )
     }
-    Canvas(Modifier.size(dim)) {
-        val k = this.size.width / 100f
-        drawRoundRect(Color(0xFF101816), size = this.size, cornerRadius = CornerRadius(24f * k))
-        withTransform({ scale(k, k, Offset.Zero) }) {
-            drawPath(p, Color(0xFFF2F2F2))
-            rotate(8f, Offset(23.5f, 43.5f)) {
-                drawRect(Color(0xFFE5303A), Offset(18f, 38f), Size(11f, 11f))
-            }
-        }
+    if (onDark) {
+        img()
+    } else {
+        Box(
+            Modifier.clip(RoundedCornerShape(14.dp)).background(Color(0xFF121212))
+                .padding(horizontal = 14.dp, vertical = 8.dp)
+        ) { img() }
     }
 }
 

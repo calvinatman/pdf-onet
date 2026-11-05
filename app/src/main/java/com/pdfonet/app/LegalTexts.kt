@@ -5,21 +5,22 @@ object LegalTexts {
 
     val privacy = """
 Privacy Policy
-Last updated: 4 November 2026
+Last updated: 5 November 2026
 
-PDF ONET works fully offline. The app does not request internet permission and does not send any data anywhere.
+PDio works fully offline. The app does not request internet permission and does not send any data anywhere.
 
 What stays on your device
 - The text you type, paste or import is used only to create your PDF.
-- Created PDFs are saved in your Downloads/PDF ONET folder.
-- A small history list (file name, size, date, favorite mark) is stored privately inside the app.
+- Photos you scan or pick are used only to create your PDF.
+- Created PDFs are saved in Downloads/PDio, or in the folder you choose.
+- A small history list (file name, size, date, favorite mark), your draft and your settings are stored privately inside the app.
 
 What we do not do
 - No accounts, no ads, no analytics, no trackers.
 - No data is collected, shared or sold.
 
 Your control
-You can remove items from History or delete the PDF files at any time. Uninstalling the app removes its private data. Your PDFs in Downloads stay until you delete them.
+You can remove items from History or delete the PDF files at any time. Uninstalling the app removes its private data. Your PDFs in the save folder stay until you delete them.
 
 Contact
 $CONTACT
@@ -27,12 +28,12 @@ $CONTACT
 
     val terms = """
 Terms of Use
-Last updated: 4 November 2026
+Last updated: 5 November 2026
 
-By using PDF ONET you agree to these terms.
+By using PDio you agree to these terms.
 
 1. Use of the app
-PDF ONET is provided free of charge to convert text into PDF files for personal or professional use.
+PDio is provided free of charge to create and edit PDF files for personal or professional use.
 
 2. Your content
 You are responsible for the content you convert and for having the right to use it. We do not see or store your content.
@@ -53,7 +54,7 @@ $CONTACT
     val licenses = """
 Open-source licenses
 
-PDF ONET is built with these open-source components, all under the Apache License 2.0:
+PDio is built with these open-source components, all under the Apache License 2.0:
 - Kotlin and kotlinx.coroutines
 - AndroidX (Core, Activity, Lifecycle)
 - Jetpack Compose and Material 3
@@ -62,10 +63,10 @@ Full license text: https://www.apache.org/licenses/LICENSE-2.0
 """.trimIndent()
 
     val about = """
-PDF ONET
-Version 1.0
+PDio
+Version 1.3
 
-Fast, private, offline text to PDF converter.
+Fast, private, offline PDF tools.
 
 Contact
 $CONTACT

@@ -66,13 +66,13 @@ fun PhotoThumb(uri: Uri, onRemove: () -> Unit) {
             Image(bitmap = b, contentDescription = "Photo", contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
         }
         Box(
-            Modifier.align(Alignment.TopEnd).size(40.dp).clickable(onClick = onRemove),
+            Modifier.align(Alignment.TopEnd).size(44.dp).clickable(onClick = onRemove),
             contentAlignment = Alignment.Center
         ) {
-            Text(
-                "\u2715", color = Color.White, fontSize = 13.sp,
-                modifier = Modifier.background(Color(0x99000000), CircleShape).padding(6.dp)
-            )
+            Box(
+                Modifier.size(24.dp).background(Color(0x99000000), CircleShape),
+                contentAlignment = Alignment.Center
+            ) { SvgIcon("close", Color.White, 12.dp) }
         }
     }
 }
@@ -131,7 +131,7 @@ fun ScanScreen(s: AppSettings, onResult: (List<PdfResult>) -> Unit) {
                 contentAlignment = Alignment.Center
             ) { Text("No pages yet. Take a photo or pick from gallery.", color = CMuted, fontSize = 14.sp) }
         } else {
-            Text("${shots.size} page(s)", color = CMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            Text(pagesLabel(shots.size), color = CMuted, fontSize = 12.sp, fontWeight = FontWeight.Bold)
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 shots.forEach { u -> PhotoThumb(u) { shots = shots - u } }
             }
@@ -144,7 +144,7 @@ fun ScanScreen(s: AppSettings, onResult: (List<PdfResult>) -> Unit) {
             busy = true
             scope.launch {
                 try {
-                    val base = "PDF-ONET-SCAN-" + SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
+                    val base = "PDio-SCAN-" + SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
                     val list = shots
                     val res = withContext(Dispatchers.Default) {
                         PdfEngine.fromImages(ctx, list, s.style, s.tree, base, filter)

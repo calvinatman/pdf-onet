@@ -8,7 +8,7 @@ import androidx.compose.runtime.setValue
 val Accents = linkedMapOf(
     "Orange" to 0xFFFF7A3DL, "Red" to 0xFFFF5252L, "Green" to 0xFF3DDC97L,
     "Blue" to 0xFF5AA9FFL, "Purple" to 0xFFC77DFFL, "Pink" to 0xFFFF6FAEL,
-    "Yellow" to 0xFFFFC83DL
+    "Yellow" to 0xFFFFC83DL, "White" to 0xFFFFFFFFL, "Black" to 0xFF000000L
 )
 val TextColors = linkedMapOf(
     "Black" to 0xFF000000L, "Dark gray" to 0xFF333333L, "Blue" to 0xFF0B3D91L,

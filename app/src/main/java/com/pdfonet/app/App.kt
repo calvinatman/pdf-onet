@@ -13,6 +13,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -47,8 +48,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
@@ -209,7 +213,7 @@ fun NavBar(tab: NavTab, s: AppSettings, onTab: (NavTab) -> Unit) {
         Row(Modifier.fillMaxSize().padding(8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             NavTab.values().forEach { t ->
                 val sel = t == tab
-                val c by animateColorAsState(if (sel) Color(0xFF1A1A1A) else CTxt, tween(dur), label = "icon")
+                val c by animateColorAsState(if (sel) COnAccent else CTxt, tween(dur), label = "icon")
                 Box(
                     Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(24.dp))
                         .clickable { tick(); onTab(t) }
@@ -228,9 +232,15 @@ fun OnboardingScreen(onStart: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Spacer(Modifier.weight(1f))
-        AppLogo(96.dp)
-        Spacer(Modifier.height(16.dp))
-        Text("PDF ONET", color = CTxt, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+        Box(Modifier.size(96.dp).clip(RoundedCornerShape(24.dp)).background(Color.Black)) {
+            Image(
+                painter = painterResource(R.drawable.ic_fg), contentDescription = "PDio icon",
+                contentScale = ContentScale.Fit, modifier = Modifier.size(96.dp).scale(1.35f)
+            )
+        }
+        Spacer(Modifier.height(18.dp))
+        Wordmark(48.dp)
+        Spacer(Modifier.height(10.dp))
         Text(
             "Your documents never leave this phone.", color = CMuted, fontSize = 16.sp,
             textAlign = TextAlign.Center
@@ -268,7 +278,7 @@ fun ResultScreen(items: List<HistoryItem>, s: AppSettings, onAnother: () -> Unit
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         if (items.size == 1) {
-            Title("PDF ready", "${items[0].pages} pages \u00B7 ${fmtSize(items[0].size)}")
+            Title("PDF ready", "${pagesLabel(items[0].pages)} \u00B7 ${fmtSize(items[0].size)}")
         } else {
             Title("${items.size} PDFs ready", "Split into ${items.size} files")
         }
@@ -285,7 +295,7 @@ fun ResultScreen(items: List<HistoryItem>, s: AppSettings, onAnother: () -> Unit
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(it.name, color = CTxt, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                        Text("${it.pages} pages \u00B7 ${fmtSize(it.size)}", color = CMuted, fontSize = 12.sp)
+                        Text("${pagesLabel(it.pages)} \u00B7 ${fmtSize(it.size)}", color = CMuted, fontSize = 12.sp)
                     }
                     Text("Open", color = CAccent, fontWeight = FontWeight.Bold, modifier = Modifier.padding(8.dp))
                 }

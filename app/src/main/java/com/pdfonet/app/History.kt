@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -17,7 +18,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -91,7 +91,7 @@ fun HistoryScreen(items: List<HistoryItem>, onChange: (List<HistoryItem>) -> Uni
                 shape = RoundedCornerShape(16.dp), colors = fieldColors()
             )
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                listOf("All", "Today", "Favorites").forEach { f -> Chip(if (filter == f) "\u25CF $f" else f) { filter = f } }
+                listOf("All", "Today", "Favorites").forEach { f -> FilterChipX(f, filter == f) { filter = f } }
                 Chip("Sort: $sort") { sort = sorts[(sorts.indexOf(sort) + 1) % sorts.size] }
             }
         }
@@ -118,12 +118,12 @@ fun HistoryScreen(items: List<HistoryItem>, onChange: (List<HistoryItem>) -> Uni
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
                             Text(it.name, color = CTxt, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                            Text("${it.pages} pages \u00B7 ${fmtSize(it.size)} \u00B7 ${df.format(Date(it.time))}", color = CMuted, fontSize = 12.sp)
+                            Text("${pagesLabel(it.pages)} \u00B7 ${fmtSize(it.size)} \u00B7 ${df.format(Date(it.time))}", color = CMuted, fontSize = 12.sp)
                         }
                         Box(
                             Modifier.size(48.dp).clickable { onChange(items.map { x -> if (x.id == it.id) x.copy(fav = !x.fav) else x }) },
                             contentAlignment = Alignment.Center
-                        ) { Text(if (it.fav) "\u2605" else "\u2606", color = CAccent, fontSize = 22.sp) }
+                        ) { SvgIcon("star", if (it.fav) CAccent else CMuted, 22.dp, filled = it.fav) }
                     }
                 }
             }

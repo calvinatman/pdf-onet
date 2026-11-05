@@ -104,7 +104,7 @@ fun deleteDoc(c: Context, uri: String) {
 }
 
 fun folderLabel(tree: String?): String {
-    if (tree == null) return "Downloads/PDF ONET"
+    if (tree == null) return "Downloads/PDio"
     return try {
         DocumentsContract.getTreeDocumentId(Uri.parse(tree)).replace("primary:", "").replace(":", "/").ifBlank { "Internal storage" }
     } catch (e: Exception) {
@@ -393,7 +393,7 @@ fun SaveFolderRow(s: AppSettings) {
     SettingsRow("Save folder", folderLabel(s.tree) + " \u203A") { ask = true }
     if (ask) {
         PickerDialog(
-            "Save folder", listOf("Choose folder...", "Use default (Downloads/PDF ONET)"), "",
+            "Save folder", listOf("Choose folder...", "Use default (Downloads/PDio)"), "",
             { if (it.startsWith("Choose")) pick.launch(null) else s.updateTree(null) },
             { ask = false }
         )

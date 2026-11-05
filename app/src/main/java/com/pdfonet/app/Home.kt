@@ -11,11 +11,14 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -113,7 +116,7 @@ fun HomeScreen(
             busy = true
             scope.launch {
                 try {
-                    val base = "PDF-ONET-IMG-" + SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
+                    val base = "PDio-IMG-" + SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
                     val res = withContext(Dispatchers.Default) {
                         PdfEngine.fromImages(ctx, uris, s.style, s.tree, base, "Original")
                     }
@@ -130,9 +133,9 @@ fun HomeScreen(
             busy = true
             scope.launch {
                 try {
-                    val base = "PDF-ONET-PAGE-" + SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
+                    val base = "PDio-PAGE-" + SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
                     val n = withContext(Dispatchers.Default) { PdfEngine.pdfToImages(ctx, uri, s.tree, base) }
-                    val where = if (s.tree == null) "Pictures/PDF ONET" else folderLabel(s.tree)
+                    val where = if (s.tree == null) "Pictures/PDio" else folderLabel(s.tree)
                     toast(ctx, "Saved $n images to $where")
                 } catch (e: Exception) {
                     toast(ctx, "Failed: " + (e.message ?: "error"))
@@ -167,7 +170,11 @@ fun HomeScreen(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item(span = { GridItemSpan(maxLineSpan) }) {
-            Title("PDF ONET", "${ToolList.size} tools. Everything runs on this phone.")
+            Column {
+                Wordmark(40.dp)
+                Spacer(Modifier.height(6.dp))
+                Text("${ToolList.size} tools. Everything runs on this phone.", color = CMuted, fontSize = 14.sp)
+            }
         }
         item(span = { GridItemSpan(maxLineSpan) }) {
             OutlinedTextField(
@@ -181,14 +188,14 @@ fun HomeScreen(
         item(span = { GridItemSpan(maxLineSpan) }) { HeroCard(ed, onEditor) }
         item(span = { GridItemSpan(maxLineSpan) }) {
             Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                (listOf("All tools") + ToolCategories + listOf()).forEach { c ->
+                (listOf("All tools") + ToolCategories).forEach { c ->
                     FilterChipX(c, cat == c) { cat = c }
                 }
             }
         }
         if (pinned.isNotEmpty() && q.isBlank() && cat == "All tools") {
             item(span = { GridItemSpan(maxLineSpan) }) { SectionLabel("PINNED \u00B7 ${pinned.size}") }
-            items(pinned, key = { "p-" + it.id }) { t ->
+            items(pinned, key = { "p-" + it.id }, contentType = { "tile" }) { t ->
                 ToolTile(t, true, { s.togglePin(t.id) }) { run(t) }
             }
         }
@@ -196,7 +203,7 @@ fun HomeScreen(
             val list = filtered.filter { it.cat == c }
             if (list.isNotEmpty()) {
                 item(span = { GridItemSpan(maxLineSpan) }) { SectionLabel(catTitle(c) + " \u00B7 " + list.size) }
-                items(list, key = { "c-" + it.id }) { t ->
+                items(list, key = { "c-" + it.id }, contentType = { "tile" }) { t ->
                     ToolTile(t, t.id in s.pins, { s.togglePin(t.id) }) { run(t) }
                 }
             }
@@ -241,15 +248,17 @@ fun HeroCard(ed: EditorState, onOpen: () -> Unit) {
         )
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             Text(if (words > 0) "Draft saved on this phone" else "Works offline", color = soft, fontSize = 12.sp)
-            Box(
+            Row(
                 Modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(22.dp)).background(Color(0xFFFDEBE3))
                     .clickable(onClick = onOpen).padding(horizontal = 18.dp),
-                contentAlignment = Alignment.Center
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    if (words > 0) "Continue \u2192" else "Open editor \u2192",
+                    if (words > 0) "Continue" else "Open editor",
                     color = Color(0xFF1A1A1A), fontWeight = FontWeight.Bold, fontSize = 15.sp
                 )
+                Spacer(Modifier.width(6.dp))
+                SvgIcon("arrow", Color(0xFF1A1A1A), 18.dp)
             }
         }
     }
@@ -259,12 +268,12 @@ fun HeroCard(ed: EditorState, onOpen: () -> Unit) {
 fun ToolTile(t: Tool, pinned: Boolean, onPin: () -> Unit, onClick: () -> Unit) {
     val shape = RoundedCornerShape(16.dp)
     Box(
-        Modifier.fillMaxWidth().heightIn(min = 108.dp).clip(shape).background(CCard)
-            .border(1.dp, CLine, shape).clickable(onClick = onClick)
+        Modifier.fillMaxWidth().heightIn(min = 108.dp)
+            .background(CCard, shape).border(1.dp, CLine, shape).clickable(onClick = onClick)
     ) {
         Column(Modifier.padding(12.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Box(
-                Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(CLine),
+                Modifier.size(40.dp).background(CLine, RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) { SvgIcon(t.icon, if (t.ready) CAccent else CMuted, 22.dp) }
             Text(t.title, color = CTxt, fontSize = 15.sp, fontWeight = FontWeight.Bold, lineHeight = 18.sp)
