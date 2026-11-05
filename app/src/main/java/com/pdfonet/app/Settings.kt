@@ -6,8 +6,9 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 
 val Accents = linkedMapOf(
-    "Orange" to 0xFFFF7A3DL, "Green" to 0xFF3DDC97L, "Blue" to 0xFF5AA9FFL,
-    "Purple" to 0xFFC77DFFL, "Pink" to 0xFFFF6FAEL, "Yellow" to 0xFFFFC83DL
+    "Orange" to 0xFFFF7A3DL, "Red" to 0xFFFF5252L, "Green" to 0xFF3DDC97L,
+    "Blue" to 0xFF5AA9FFL, "Purple" to 0xFFC77DFFL, "Pink" to 0xFFFF6FAEL,
+    "Yellow" to 0xFFFFC83DL
 )
 val TextColors = linkedMapOf(
     "Black" to 0xFF000000L, "Dark gray" to 0xFF333333L, "Blue" to 0xFF0B3D91L,
@@ -65,6 +66,14 @@ class AppSettings(ctx: Context) {
         private set
     var pro by mutableStateOf(sp.getBoolean("pro", false))
         private set
+    var anim by mutableStateOf(sp.getBoolean("anim", true))
+        private set
+    var haptic by mutableStateOf(sp.getBoolean("haptic", true))
+        private set
+    var onboarded by mutableStateOf(sp.getBoolean("onboarded", false))
+        private set
+    var pins by mutableStateOf<Set<String>>(sp.getStringSet("pins", emptySet())?.toSet() ?: emptySet())
+        private set
     var style by mutableStateOf(
         PdfStyle(
             pageSize = sp.getString("pageSize", "A4") ?: "A4",
@@ -86,11 +95,20 @@ class AppSettings(ctx: Context) {
     fun setAfter(v: String) { afterConvert = v; sp.edit().putString("after", v).apply() }
     fun setClean(v: Int) { autoClean = v; sp.edit().putInt("clean", v).apply() }
     fun updatePro(v: Boolean) { pro = v; sp.edit().putBoolean("pro", v).apply() }
+    fun updateAnim(v: Boolean) { anim = v; sp.edit().putBoolean("anim", v).apply() }
+    fun updateHaptic(v: Boolean) { haptic = v; sp.edit().putBoolean("haptic", v).apply() }
+    fun finishOnboarding() { onboarded = true; sp.edit().putBoolean("onboarded", true).apply() }
     fun updateTree(v: String?) {
         tree = v
         val e = sp.edit()
         if (v == null) e.remove("tree") else e.putString("tree", v)
         e.apply()
+    }
+
+    fun togglePin(id: String) {
+        val n: Set<String> = if (id in pins) pins - id else pins + id
+        pins = n
+        sp.edit().putStringSet("pins", HashSet(n)).apply()
     }
 
     fun saveStyle(n: PdfStyle) {
@@ -105,8 +123,9 @@ class AppSettings(ctx: Context) {
     }
 
     fun resetAll() {
-        sp.edit().clear().apply()
+        sp.edit().clear().putBoolean("onboarded", true).apply()
         theme = "Dark"; accent = "Orange"; afterConvert = "Result screen"
-        autoClean = 0; tree = null; pro = false; style = PdfStyle()
+        autoClean = 0; tree = null; pro = false; anim = true; haptic = true
+        pins = emptySet(); style = PdfStyle()
     }
 }

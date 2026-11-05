@@ -49,17 +49,21 @@ fun SettingsScreen(s: AppSettings, onLegal: (String, String) -> Unit, onClearHis
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Text("Accent", color = CTxt, fontSize = 16.sp)
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                     Accents.forEach { (n, v) ->
                         val on = s.accent == n
                         Box(
-                            Modifier.size(30.dp).clip(CircleShape).background(Color(v))
+                            Modifier.size(28.dp).clip(CircleShape).background(Color(v))
                                 .then(if (on) Modifier.border(3.dp, CTxt, CircleShape) else Modifier)
                                 .clickable { s.updateAccent(n) }
                         )
                     }
                 }
             }
+        }
+        Group("MOTION & FEEL") {
+            SwitchRow("Animations", s.anim) { s.updateAnim(it) }
+            SwitchRow("Haptic feedback", s.haptic) { s.updateHaptic(it) }
         }
         Group("PDF DEFAULTS") {
             SettingsRow("Page size", st.pageSize + arrow) { dlg = "size" }
@@ -81,7 +85,7 @@ fun SettingsScreen(s: AppSettings, onLegal: (String, String) -> Unit, onClearHis
             SettingsRow("Privacy Policy", "\u203A") { onLegal("Privacy Policy", LegalTexts.privacy) }
             SettingsRow("Terms of Use", "\u203A") { onLegal("Terms of Use", LegalTexts.terms) }
             SettingsRow("Open-source licenses", "\u203A") { onLegal("Open-source licenses", LegalTexts.licenses) }
-            SettingsRow("About", "v1.1 \u203A") { onLegal("About", LegalTexts.about) }
+            SettingsRow("About", "v1.2 \u203A") { onLegal("About", LegalTexts.about) }
         }
         Group("CONTACT") {
             SettingsRow("Contact us", "Telegram @blvcknetwork \u203A") { openLink(ctx, "https://t.me/blvcknetwork") }

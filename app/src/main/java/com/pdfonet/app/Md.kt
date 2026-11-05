@@ -3,6 +3,7 @@ package com.pdfonet.app
 data class Seg(val t: String, val b: Boolean, val i: Boolean, val c: Boolean)
 
 // kind: 0 paragraph, 1 heading, 2 bullet, 3 numbered, 4 quote, 5 code block, 6 rule, 7 page break, 8 image
+// start/end: character range of this block in the source text
 data class ML(
     val kind: Int,
     val segs: List<Seg> = emptyList(),
@@ -10,7 +11,9 @@ data class ML(
     val indent: Int = 0,
     val gap: Boolean = false,
     val text: String = "",
-    val prefix: String = ""
+    val prefix: String = "",
+    val start: Int = 0,
+    val end: Int = 0
 )
 
 object Md {
@@ -49,18 +52,24 @@ object Md {
         val out = ArrayList<ML>()
         val buf = StringBuilder()
         var code = false
+        var codeStart = 0
         var gap = false
-        for (raw in text.lineSequence()) {
+        var off = 0
+        for (raw in text.split('\n')) {
+            val lineStart = off
+            off += raw.length + 1
+            val lineEnd = minOf(off, text.length)
             val line = raw.trimEnd('\r')
             val t = line.trim()
             if (t.startsWith("```")) {
                 if (code) {
-                    out.add(ML(5, text = buf.toString().trimEnd('\n'), gap = gap))
+                    out.add(ML(5, text = buf.toString().trimEnd('\n'), gap = gap, start = codeStart, end = lineEnd))
                     buf.setLength(0)
                     code = false
                     gap = false
                 } else {
                     code = true
+                    codeStart = lineStart
                 }
                 continue
             }
@@ -86,10 +95,12 @@ object Md {
                 }
                 else -> ML(0, segs(t))
             }
-            out.add(ml.copy(gap = gap))
+            out.add(ml.copy(gap = gap, start = lineStart, end = lineEnd))
             gap = false
         }
-        if (code && buf.isNotEmpty()) out.add(ML(5, text = buf.toString().trimEnd('\n'), gap = gap))
+        if (code && buf.isNotEmpty()) {
+            out.add(ML(5, text = buf.toString().trimEnd('\n'), gap = gap, start = codeStart, end = text.length))
+        }
         return out
     }
 }

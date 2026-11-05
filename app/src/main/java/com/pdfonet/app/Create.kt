@@ -21,7 +21,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -29,12 +28,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
 
 @Composable
 fun ToolCard(title: String, sub: String, enabled: Boolean = true, onClick: () -> Unit = {}) {
@@ -46,59 +39,6 @@ fun ToolCard(title: String, sub: String, enabled: Boolean = true, onClick: () ->
     ) {
         Text(title, color = if (enabled) CTxt else CMuted, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
         Text(sub, color = CMuted, fontSize = 13.sp)
-    }
-}
-
-@Composable
-fun CreateScreen(ed: EditorState, s: AppSettings, goHome: () -> Unit, onResult: (List<PdfResult>) -> Unit) {
-    val ctx = LocalContext.current
-    val scope = rememberCoroutineScope()
-    var tpl by remember { mutableStateOf(false) }
-    var busy by remember { mutableStateOf(false) }
-
-    val pickFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) {
-            val r = readTextFrom(ctx, uri)
-            if (r != null) {
-                ed.load(r.second)
-                if (r.first.endsWith(".md", true)) s.updatePro(true)
-                toast(ctx, "Loaded into editor")
-                goHome()
-            } else toast(ctx, "Could not read file")
-        }
-    }
-    val pickImgs = rememberLauncherForActivityResult(ActivityResultContracts.GetMultipleContents()) { uris ->
-        if (uris.isNotEmpty()) {
-            busy = true
-            scope.launch {
-                try {
-                    val base = "PDF-ONET-IMG-" + SimpleDateFormat("yyyyMMdd-HHmmss", Locale.US).format(Date())
-                    val res = withContext(Dispatchers.Default) { PdfEngine.fromImages(ctx, uris, s.style, s.tree, base) }
-                    onResult(res)
-                } catch (e: Exception) {
-                    toast(ctx, "Failed: " + (e.message ?: "error"))
-                }
-                busy = false
-            }
-        }
-    }
-
-    if (tpl) {
-        TemplatesScreen(ed, s, { tpl = false }, goHome)
-    } else {
-        Column(
-            Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp)
-        ) {
-            Title("Tools", if (busy) "Creating PDF..." else "Create PDFs from files, images and templates")
-            ToolCard("From file", ".txt, .md or .docx opens in the editor") { pickFile.launch(arrayOf("*/*")) }
-            ToolCard("Image to PDF", "Pick one or more photos, one per page") { if (!busy) pickImgs.launch("image/*") }
-            ToolCard("Templates", "Resume, Letter, Notes, Report and your own") { tpl = true }
-            ToolCard("Merge PDFs", "Coming in Phase 3", enabled = false)
-            ToolCard("Split PDF", "Coming in Phase 3", enabled = false)
-            ToolCard("Compress PDF", "Coming in Phase 3", enabled = false)
-            ToolCard("Password protect", "Coming in Phase 3", enabled = false)
-        }
     }
 }
 
@@ -123,13 +63,16 @@ fun TemplatesScreen(ed: EditorState, s: AppSettings, onBack: () -> Unit, goHome:
             try {
                 ctx.contentResolver.openOutputStream(uri)!!.use { it.write(t.body.toByteArray()) }
                 toast(ctx, "Exported")
-            } catch (e: Exception) { toast(ctx, "Export failed") }
+            } catch (e: Exception) {
+                toast(ctx, "Export failed")
+            }
         }
     }
     val import = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             val r = readTextFrom(ctx, uri)
-            if (r != null) put(r.first.substringBeforeLast('.').ifBlank { "Imported" }, r.second) else toast(ctx, "Could not read file")
+            if (r != null) put(r.first.substringBeforeLast('.').ifBlank { "Imported" }, r.second)
+            else toast(ctx, "Could not read file")
         }
     }
 
@@ -159,7 +102,9 @@ fun TemplatesScreen(ed: EditorState, s: AppSettings, onBack: () -> Unit, goHome:
             text = { Text(if (own) "Use it, rename, export or delete." else "Built-in template.") },
             confirmButton = {
                 Column {
-                    TextButton(onClick = { ed.load(t.body); s.updatePro(true); act = null; goHome() }) { Text("Use (open in editor)", color = CAccent) }
+                    TextButton(onClick = { ed.load(t.body); s.updatePro(true); act = null; goHome() }) {
+                        Text("Use (open in editor)", color = CAccent)
+                    }
                     if (own) {
                         TextButton(onClick = { nameDlg = "rename" }) { Text("Rename", color = CAccent) }
                         TextButton(onClick = { exportT = t; act = null; export.launch(t.name + ".md") }) { Text("Export", color = CAccent) }

@@ -1,12 +1,24 @@
 package com.pdfonet.app
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.Canvas
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,6 +27,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBarsPadding
@@ -34,35 +47,40 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.StrokeJoin
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 
-enum class NavTab { Home, Create, History, Settings }
+enum class NavTab { Home, Scan, History, Settings }
+
+fun iconFor(t: NavTab): String = when (t) {
+    NavTab.Home -> "home"
+    NavTab.Scan -> "cam"
+    NavTab.History -> "folder"
+    NavTab.Settings -> "gear"
+}
 
 @Composable
 fun PdfOnetApp(s: AppSettings) {
     val ctx = LocalContext.current
     val ed = remember { EditorState(ctx) }
     var tab by remember { mutableStateOf(NavTab.Home) }
-    var result by remember { mutableStateOf<List<HistoryItem>?>(null) }
-    var legal by remember { mutableStateOf<Pair<String, String>?>(null) }
+    var editor by remember { mutableStateOf(false) }
+    var full by remember { mutableStateOf(false) }
+    var templates by remember { mutableStateOf(false) }
     var options by remember { mutableStateOf(false) }
+    var legal by remember { mutableStateOf(false) }
+    var legalLast by remember { mutableStateOf(Pair("", "")) }
+    var result by remember { mutableStateOf(false) }
+    var resultLast by remember { mutableStateOf<List<HistoryItem>>(emptyList()) }
     var history by remember { mutableStateOf(Store.load(ctx)) }
 
     fun update(list: List<HistoryItem>) {
@@ -74,7 +92,8 @@ fun PdfOnetApp(s: AppSettings) {
         val now = System.currentTimeMillis()
         val items = res.mapIndexed { i, r -> HistoryItem(now + i, r.name, r.uri.toString(), r.pages, r.size, now) }
         update(items + history)
-        result = items
+        resultLast = items
+        result = true
         if (s.afterConvert == "Open PDF directly" && items.isNotEmpty()) openPdf(ctx, items[0].uri)
     }
 
@@ -94,95 +113,150 @@ fun PdfOnetApp(s: AppSettings) {
         withContext(Dispatchers.IO) { ed.saveDraft() }
     }
 
-    BackHandler(enabled = legal != null || options || result != null || tab != NavTab.Home) {
+    BackHandler(enabled = legal || options || result || templates || editor || tab != NavTab.Home) {
         when {
-            legal != null -> legal = null
+            legal -> legal = false
             options -> options = false
-            result != null -> result = null
+            result -> result = false
+            templates -> templates = false
+            editor -> { editor = false; full = false }
             else -> tab = NavTab.Home
         }
     }
 
-    Box(Modifier.fillMaxSize().background(CBg).systemBarsPadding().imePadding()) {
-        Column(Modifier.fillMaxSize()) {
-            Box(Modifier.weight(1f)) {
-                val l = legal
-                val r = result
-                when {
-                    l != null -> LegalScreen(l.first, l.second) { legal = null }
-                    options -> OptionsScreen(s) { options = false }
-                    r != null -> ResultScreen(r, s) { result = null; tab = NavTab.Home }
-                    tab == NavTab.Home -> HomeScreen(ed, s, { options = true }) { finish(it) }
-                    tab == NavTab.Create -> CreateScreen(ed, s, { tab = NavTab.Home }) { finish(it) }
-                    tab == NavTab.History -> HistoryScreen(history) { update(it) }
-                    else -> SettingsScreen(s, { t, b -> legal = t to b }) { update(emptyList()) }
+    val key = when {
+        legal -> "legal"
+        options -> "options"
+        result -> "result"
+        templates -> "templates"
+        editor -> "editor"
+        else -> tab.name
+    }
+
+    if (!s.onboarded) {
+        Box(Modifier.fillMaxSize().background(CBg).systemBarsPadding()) {
+            OnboardingScreen { s.finishOnboarding() }
+        }
+    } else {
+        Box(Modifier.fillMaxSize().background(CBg).systemBarsPadding().imePadding()) {
+            Column(Modifier.fillMaxSize()) {
+                Box(Modifier.weight(1f)) {
+                    AnimatedContent(
+                        targetState = key,
+                        transitionSpec = {
+                            if (!s.anim) {
+                                EnterTransition.None togetherWith ExitTransition.None
+                            } else {
+                                val names = NavTab.values().map { it.name }
+                                val a = names.indexOf(initialState)
+                                val b = names.indexOf(targetState)
+                                if (a >= 0 && b >= 0) {
+                                    val dir = if (b > a) 1 else -1
+                                    (slideInHorizontally(tween(260)) { it * dir / 4 } + fadeIn(tween(260))) togetherWith
+                                        (slideOutHorizontally(tween(260)) { -it * dir / 4 } + fadeOut(tween(200)))
+                                } else {
+                                    (fadeIn(tween(240)) + slideInVertically(tween(240)) { it / 12 }) togetherWith
+                                        fadeOut(tween(180))
+                                }
+                            }
+                        },
+                        label = "screen"
+                    ) { k ->
+                        when (k) {
+                            "legal" -> LegalScreen(legalLast.first, legalLast.second) { legal = false }
+                            "options" -> OptionsScreen(s) { options = false }
+                            "result" -> ResultScreen(resultLast, s) {
+                                result = false; editor = false; full = false; tab = NavTab.Home
+                            }
+                            "templates" -> TemplatesScreen(ed, s, { templates = false }) { templates = false; editor = true }
+                            "editor" -> EditorScreen(
+                                ed, s, full, { full = it },
+                                { editor = false; full = false }, { options = true }
+                            ) { finish(it) }
+                            "Home" -> HomeScreen(
+                                ed, s, { editor = true }, { tab = NavTab.Scan }, { templates = true }
+                            ) { finish(it) }
+                            "Scan" -> ScanScreen(s) { finish(it) }
+                            "History" -> HistoryScreen(history) { update(it) }
+                            else -> SettingsScreen(s, { t, b -> legalLast = Pair(t, b); legal = true }) { update(emptyList()) }
+                        }
+                    }
+                }
+                if (!full && !legal && !options) {
+                    NavBar(tab, s) { result = false; templates = false; editor = false; tab = it }
                 }
             }
-            if (legal == null && !options) NavBar(tab) { result = null; tab = it }
         }
     }
 }
 
 @Composable
-fun NavBar(tab: NavTab, onTab: (NavTab) -> Unit) {
+fun NavBar(tab: NavTab, s: AppSettings, onTab: (NavTab) -> Unit) {
     val shape = RoundedCornerShape(32.dp)
-    Row(
+    val tick = rememberHaptic(s)
+    val dur = if (s.anim) 280 else 0
+    BoxWithConstraints(
         Modifier.padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 12.dp)
             .fillMaxWidth().height(64.dp)
-            .clip(shape).background(CNav).border(1.dp, CLine, shape).padding(8.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+            .clip(shape).background(CNav).border(1.dp, CLine, shape)
     ) {
-        NavTab.values().forEach { t ->
-            val sel = t == tab
-            Box(
-                Modifier.weight(1f).fillMaxHeight()
-                    .clip(RoundedCornerShape(24.dp))
-                    .background(if (sel) CAccent else Color.Transparent)
-                    .clickable { onTab(t) }
-                    .semantics { contentDescription = t.name },
-                contentAlignment = Alignment.Center
-            ) {
-                NavIcon(t, if (sel) Color(0xFF1A1A1A) else CTxt)
+        val itemW = (maxWidth - 16.dp - 12.dp) / 4
+        val x by animateDpAsState(8.dp + (itemW + 4.dp) * tab.ordinal, tween(dur), label = "pill")
+        Box(
+            Modifier.offset(x = x, y = 8.dp).size(width = itemW, height = 48.dp)
+                .clip(RoundedCornerShape(24.dp)).background(CAccent)
+        )
+        Row(Modifier.fillMaxSize().padding(8.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+            NavTab.values().forEach { t ->
+                val sel = t == tab
+                val c by animateColorAsState(if (sel) Color(0xFF1A1A1A) else CTxt, tween(dur), label = "icon")
+                Box(
+                    Modifier.weight(1f).fillMaxHeight().clip(RoundedCornerShape(24.dp))
+                        .clickable { tick(); onTab(t) }
+                        .semantics { contentDescription = t.name },
+                    contentAlignment = Alignment.Center
+                ) { SvgIcon(iconFor(t), c, 26.dp) }
             }
         }
     }
 }
 
 @Composable
-fun NavIcon(t: NavTab, color: Color) {
-    Canvas(Modifier.size(26.dp)) {
-        val s = size.width / 24f
-        val st = Stroke(width = 2f * s, cap = StrokeCap.Round, join = StrokeJoin.Round)
-        when (t) {
-            NavTab.Home -> {
-                val roof = Path().apply { moveTo(3 * s, 11 * s); lineTo(12 * s, 3 * s); lineTo(21 * s, 11 * s) }
-                drawPath(roof, color, style = st)
-                val body = Path().apply { moveTo(5 * s, 10 * s); lineTo(5 * s, 20 * s); lineTo(19 * s, 20 * s); lineTo(19 * s, 10 * s) }
-                drawPath(body, color, style = st)
-                val door = Path().apply { moveTo(10 * s, 20 * s); lineTo(10 * s, 14 * s); lineTo(14 * s, 14 * s); lineTo(14 * s, 20 * s) }
-                drawPath(door, color, style = st)
-            }
-            NavTab.Create -> {
-                drawCircle(color, 3.5f * s, Offset(16.5f * s, 7.5f * s), style = st)
-                drawLine(color, Offset(14f * s, 10f * s), Offset(5f * s, 19f * s), strokeWidth = 3f * s, cap = StrokeCap.Round)
-                drawLine(color, Offset(5f * s, 5f * s), Offset(10f * s, 10f * s), strokeWidth = 2f * s, cap = StrokeCap.Round)
-                drawLine(color, Offset(13f * s, 13f * s), Offset(19f * s, 19f * s), strokeWidth = 3f * s, cap = StrokeCap.Round)
-            }
-            NavTab.History -> {
-                val p = Path().apply {
-                    moveTo(3 * s, 6 * s); lineTo(9 * s, 6 * s); lineTo(11 * s, 8 * s)
-                    lineTo(21 * s, 8 * s); lineTo(21 * s, 19 * s); lineTo(3 * s, 19 * s); close()
-                }
-                drawPath(p, color, style = st)
-            }
-            NavTab.Settings -> {
-                drawCircle(color, 3 * s, Offset(12 * s, 12 * s), style = st)
-                drawCircle(
-                    color, 8 * s, Offset(12 * s, 12 * s),
-                    style = Stroke(width = 2f * s, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4 * s, 3 * s)))
-                )
+fun OnboardingScreen(onStart: () -> Unit) {
+    Column(
+        Modifier.fillMaxSize().padding(24.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Spacer(Modifier.weight(1f))
+        AppLogo(96.dp)
+        Spacer(Modifier.height(16.dp))
+        Text("PDF ONET", color = CTxt, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+        Text(
+            "Your documents never leave this phone.", color = CMuted, fontSize = 16.sp,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(28.dp))
+        listOf(
+            "doc" to "Every tool runs on this phone",
+            "lock" to "No account, no tracking, no ads",
+            "zip" to "Works with no connection"
+        ).forEach { (ic, t) ->
+            Row(
+                Modifier.fillMaxWidth().padding(vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(CCard),
+                    contentAlignment = Alignment.Center
+                ) { SvgIcon(ic, CAccent, 22.dp) }
+                Spacer(Modifier.width(14.dp))
+                Text(t, color = CTxt, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
             }
         }
+        Spacer(Modifier.weight(1f))
+        PrimaryButton("Get started") { onStart() }
+        Spacer(Modifier.height(8.dp))
+        Text("Privacy Policy and Terms are in Settings.", color = CMuted, fontSize = 12.sp)
     }
 }
 
