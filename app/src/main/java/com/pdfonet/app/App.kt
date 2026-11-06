@@ -2,6 +2,7 @@ package com.pdfonet.app
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.animateColorAsState
@@ -12,8 +13,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -23,10 +24,12 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -48,15 +51,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.scale
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.Dispatchers
@@ -86,6 +85,7 @@ fun PdfOnetApp(s: AppSettings) {
     var result by remember { mutableStateOf(false) }
     var resultLast by remember { mutableStateOf<List<HistoryItem>>(emptyList()) }
     var history by remember { mutableStateOf(Store.load(ctx)) }
+    val imeOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
 
     fun update(list: List<HistoryItem>) {
         history = list
@@ -137,14 +137,12 @@ fun PdfOnetApp(s: AppSettings) {
         else -> tab.name
     }
 
-    if (!s.onboarded) {
-        Box(Modifier.fillMaxSize().background(CBg).systemBarsPadding()) {
-            OnboardingScreen { s.finishOnboarding() }
-        }
+    if (!s.onboarded || s.termsVersion != TERMS_VERSION) {
+        OnboardingFlow(s)
     } else {
-        Box(Modifier.fillMaxSize().background(CBg).systemBarsPadding().imePadding()) {
+        Box(Modifier.fillMaxSize().background(CBg).systemBarsPadding()) {
             Column(Modifier.fillMaxSize()) {
-                Box(Modifier.weight(1f)) {
+                Box(Modifier.weight(1f).imePadding()) {
                     AnimatedContent(
                         targetState = key,
                         transitionSpec = {
@@ -186,7 +184,11 @@ fun PdfOnetApp(s: AppSettings) {
                         }
                     }
                 }
-                if (!full && !legal && !options) {
+                AnimatedVisibility(
+                    visible = !full && !legal && !options && !imeOpen,
+                    enter = if (s.anim) slideInVertically(tween(220)) { it } + fadeIn(tween(220)) else EnterTransition.None,
+                    exit = if (s.anim) slideOutVertically(tween(180)) { it } + fadeOut(tween(160)) else ExitTransition.None
+                ) {
                     NavBar(tab, s) { result = false; templates = false; editor = false; tab = it }
                 }
             }
@@ -222,51 +224,6 @@ fun NavBar(tab: NavTab, s: AppSettings, onTab: (NavTab) -> Unit) {
                 ) { SvgIcon(iconFor(t), c, 26.dp) }
             }
         }
-    }
-}
-
-@Composable
-fun OnboardingScreen(onStart: () -> Unit) {
-    Column(
-        Modifier.fillMaxSize().padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Spacer(Modifier.weight(1f))
-        Box(Modifier.size(96.dp).clip(RoundedCornerShape(24.dp)).background(Color.Black)) {
-            Image(
-                painter = painterResource(R.drawable.ic_fg), contentDescription = "PDio icon",
-                contentScale = ContentScale.Fit, modifier = Modifier.size(96.dp).scale(1.35f)
-            )
-        }
-        Spacer(Modifier.height(18.dp))
-        Wordmark(48.dp)
-        Spacer(Modifier.height(10.dp))
-        Text(
-            "Your documents never leave this phone.", color = CMuted, fontSize = 16.sp,
-            textAlign = TextAlign.Center
-        )
-        Spacer(Modifier.height(28.dp))
-        listOf(
-            "doc" to "Every tool runs on this phone",
-            "lock" to "No account, no tracking, no ads",
-            "zip" to "Works with no connection"
-        ).forEach { (ic, t) ->
-            Row(
-                Modifier.fillMaxWidth().padding(vertical = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    Modifier.size(44.dp).clip(RoundedCornerShape(14.dp)).background(CCard),
-                    contentAlignment = Alignment.Center
-                ) { SvgIcon(ic, CAccent, 22.dp) }
-                Spacer(Modifier.width(14.dp))
-                Text(t, color = CTxt, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-            }
-        }
-        Spacer(Modifier.weight(1f))
-        PrimaryButton("Get started") { onStart() }
-        Spacer(Modifier.height(8.dp))
-        Text("Privacy Policy and Terms are in Settings.", color = CMuted, fontSize = 12.sp)
     }
 }
 

@@ -72,6 +72,8 @@ class AppSettings(ctx: Context) {
         private set
     var onboarded by mutableStateOf(sp.getBoolean("onboarded", false))
         private set
+    var termsVersion by mutableStateOf(sp.getString("terms", "") ?: "")
+        private set
     var pins by mutableStateOf<Set<String>>(sp.getStringSet("pins", setOf("text", "templates"))?.toSet() ?: setOf("text", "templates"))
         private set
     var style by mutableStateOf(
@@ -98,6 +100,11 @@ class AppSettings(ctx: Context) {
     fun updateAnim(v: Boolean) { anim = v; sp.edit().putBoolean("anim", v).apply() }
     fun updateHaptic(v: Boolean) { haptic = v; sp.edit().putBoolean("haptic", v).apply() }
     fun finishOnboarding() { onboarded = true; sp.edit().putBoolean("onboarded", true).apply() }
+    fun acceptTerms(v: String) {
+        termsVersion = v
+        onboarded = true
+        sp.edit().putString("terms", v).putBoolean("onboarded", true).apply()
+    }
     fun updateTree(v: String?) {
         tree = v
         val e = sp.edit()
@@ -109,6 +116,11 @@ class AppSettings(ctx: Context) {
         val n: Set<String> = if (id in pins) pins - id else pins + id
         pins = n
         sp.edit().putStringSet("pins", HashSet(n)).apply()
+    }
+
+    fun replacePins(ids: Set<String>) {
+        pins = ids
+        sp.edit().putStringSet("pins", HashSet(ids)).apply()
     }
 
     fun saveStyle(n: PdfStyle) {
@@ -123,7 +135,7 @@ class AppSettings(ctx: Context) {
     }
 
     fun resetAll() {
-        sp.edit().clear().putBoolean("onboarded", true).apply()
+        sp.edit().clear().putBoolean("onboarded", true).putString("terms", termsVersion).apply()
         theme = "Light"; accent = "Black"; afterConvert = "Result screen"
         autoClean = 0; tree = null; pro = false; anim = true; haptic = true
         pins = setOf("text", "templates"); style = PdfStyle()

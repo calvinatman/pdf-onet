@@ -20,10 +20,12 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -57,6 +59,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextRange
@@ -182,7 +186,10 @@ fun PageCell(pg: Paginated, idx: Int, widthPx: Int, onTap: () -> Unit) {
 }
 
 @Composable
-fun PageEditCell(pg: Paginated, idx: Int, e: EditCtx) {
+fun PageEditCell(
+    pg: Paginated, idx: Int, e: EditCtx,
+    tall: Boolean = false, modifier: Modifier = Modifier
+) {
     val st = pg.st
     val ctx = LocalContext.current
     val density = LocalDensity.current
@@ -195,10 +202,8 @@ fun PageEditCell(pg: Paginated, idx: Int, e: EditCtx) {
         delay(150)
         try { fr.requestFocus() } catch (ex: Exception) { }
     }
-    BoxWithConstraints(
-        Modifier.fillMaxWidth().aspectRatio(pg.pw.toFloat() / pg.ph).clip(shape)
-            .background(paper).border(3.dp, CAccent, shape)
-    ) {
+    val base = if (tall) modifier else modifier.fillMaxWidth().aspectRatio(pg.pw.toFloat() / pg.ph)
+    BoxWithConstraints(base.clip(shape).background(paper).border(3.dp, CAccent, shape)) {
         val scale = maxWidth.value / pg.pw
         val fsDp = st.fontSize * scale
         val fs = with(density) { fsDp.dp.toSp() }
@@ -310,6 +315,10 @@ fun EditorScreen(
     val scope = rememberCoroutineScope()
     val tick = rememberHaptic(s)
     val dur = if (s.anim) 240 else 0
+    val imeOpen = WindowInsets.ime.getBottom(LocalDensity.current) > 0
+    val focusManager = LocalFocusManager.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val hideKeyboard: () -> Unit = { focusManager.clearFocus(); keyboard?.hide() }
     var busy by remember { mutableStateOf(false) }
     var preview by remember { mutableStateOf(false) }
     var fsMode by remember { mutableStateOf(0) }
@@ -437,24 +446,37 @@ fun EditorScreen(
             Modifier.fillMaxSize().padding(horizontal = 20.dp).padding(top = 8.dp),
             verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    "\u2039  Text to PDF", color = CAccent, fontSize = 18.sp, fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f).heightIn(min = 48.dp).clickable(onClick = onBack).padding(vertical = 12.dp)
-                )
-                Text("Pro", color = CTxt, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.width(8.dp))
-                Switch(checked = s.pro, onCheckedChange = { s.updatePro(it); closeEdit() }, colors = switchColors())
-                Spacer(Modifier.width(4.dp))
-                IconBtn("full", "Full screen") { onFull(true) }
-            }
-            FormatBar({ op -> act(op) }, { pickImg.launch("image/*") })
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    FilterChipX("Edit", !preview) { preview = false; closeEdit() }
-                    FilterChipX("Preview", preview) { preview = true }
+            if (!imeOpen) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "\u2039  Text to PDF", color = CAccent, fontSize = 18.sp, fontWeight = FontWeight.Bold,
+                        modifier = Modifier.weight(1f).heightIn(min = 48.dp).clickable(onClick = onBack).padding(vertical = 12.dp)
+                    )
+                    Text("Pro", color = CTxt, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.width(8.dp))
+                    Switch(checked = s.pro, onCheckedChange = { s.updatePro(it); closeEdit() }, colors = switchColors())
+                    Spacer(Modifier.width(4.dp))
+                    IconBtn("full", "Full screen") { onFull(true) }
                 }
-                IconGroup(onUndo, onRedo, onFind)
+            }
+            Row(
+                Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                FormatBar({ op -> act(op) }, { pickImg.launch("image/*") }, Modifier.weight(1f))
+                if (imeOpen) {
+                    IconGroup(onUndo, onRedo, onFind)
+                    IconBtn("check", "Hide keyboard") { hideKeyboard() }
+                }
+            }
+            if (!imeOpen) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        FilterChipX("Edit", !preview) { preview = false; closeEdit() }
+                        FilterChipX("Preview", preview) { preview = true }
+                    }
+                    IconGroup(onUndo, onRedo, onFind)
+                }
             }
             Box(Modifier.fillMaxWidth().weight(1f)) {
                 AnimatedContent(
@@ -470,45 +492,56 @@ fun EditorScreen(
                             shape = RoundedCornerShape(16.dp), colors = fieldColors()
                         )
                     } else {
-                        PagesArea(pg, 1, active, ectx, { openPage(it) }, Modifier.fillMaxSize())
+                        val a = active
+                        val pgNow = pg
+                        if (a != null && pgNow != null && ectx != null) {
+                            PageEditCell(pgNow, a, ectx, tall = true, modifier = Modifier.fillMaxSize())
+                        } else {
+                            PagesArea(pg, 1, active, ectx, { openPage(it) }, Modifier.fillMaxSize())
+                        }
                     }
                 }
             }
-            Text(
-                if (preview) pagesLabel(total) + " \u00B7 tap a page to edit it" else "$words words \u00B7 ${ed.tfv.text.length} chars",
-                color = CMuted, fontSize = 12.sp
-            )
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Chip(st.pageSize) { dlg = "size" }
-                Chip(if (st.landscape) "Landscape" else "Portrait") { dlg = "orient" }
-                Chip(st.font) { dlg = "font" }
-                Chip("Size ${st.fontSize}") { dlg = "fsize" }
-                Chip("More \u203A") { onOptions() }
-                Chip("Clear") { ed.apply(TextFieldValue("")); closeEdit() }
+            if (!imeOpen) {
+                Text(
+                    if (preview) pagesLabel(total) + " \u00B7 tap a page to edit it" else "$words words \u00B7 ${ed.tfv.text.length} chars",
+                    color = CMuted, fontSize = 12.sp
+                )
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Chip(st.pageSize) { dlg = "size" }
+                    Chip(if (st.landscape) "Landscape" else "Portrait") { dlg = "orient" }
+                    Chip(st.font) { dlg = "font" }
+                    Chip("Size ${st.fontSize}") { dlg = "fsize" }
+                    Chip("More \u203A") { onOptions() }
+                    Chip("Clear") { ed.apply(TextFieldValue("")); closeEdit() }
+                }
+                PrimaryButton(if (busy) "Converting..." else "Convert to PDF", enabled = ed.tfv.text.isNotBlank() && !busy) { convert() }
             }
-            PrimaryButton(if (busy) "Converting..." else "Convert to PDF", enabled = ed.tfv.text.isNotBlank() && !busy) { convert() }
         }
     } else {
         val docTitle = ed.tfv.text.lineSequence().firstOrNull { it.isNotBlank() }
             ?.trimStart('#', ' ')?.take(28) ?: "Untitled"
         val modeLabel = when (fsMode) { 0 -> "Pages \u00B72 col"; 1 -> "Pages \u00B71 col"; else -> "Text" }
         val focus = fsFocus
+        val pgNow = pg
         Column(Modifier.fillMaxSize()) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                IconBtn("exit", "Exit full screen") { closeEdit(); onFull(false) }
-                Column(Modifier.weight(1f)) {
-                    Text(docTitle, color = CTxt, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                    Text("${pagesLabel(total)} \u00B7 ${st.pageSize} \u00B7 ${st.font} ${st.fontSize}", color = CMuted, fontSize = 11.sp, maxLines = 1)
+            if (!imeOpen) {
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    IconBtn("exit", "Exit full screen") { closeEdit(); onFull(false) }
+                    Column(Modifier.weight(1f)) {
+                        Text(docTitle, color = CTxt, fontSize = 16.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                        Text("${pagesLabel(total)} \u00B7 ${st.pageSize} \u00B7 ${st.font} ${st.fontSize}", color = CMuted, fontSize = 11.sp, maxLines = 1)
+                    }
+                    Chip(modeLabel) { dlg = "fsmode" }
+                    Box(
+                        Modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(22.dp)).background(CAccent)
+                            .clickable { convert() }.padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) { Text(if (busy) "..." else "Convert", color = COnAccent, fontWeight = FontWeight.Bold, fontSize = 15.sp) }
                 }
-                Chip(modeLabel) { dlg = "fsmode" }
-                Box(
-                    Modifier.heightIn(min = 44.dp).clip(RoundedCornerShape(22.dp)).background(CAccent)
-                        .clickable { convert() }.padding(horizontal = 16.dp),
-                    contentAlignment = Alignment.Center
-                ) { Text(if (busy) "..." else "Convert", color = COnAccent, fontWeight = FontWeight.Bold, fontSize = 15.sp) }
             }
             Row(
                 Modifier.fillMaxWidth().padding(horizontal = 12.dp),
@@ -516,6 +549,7 @@ fun EditorScreen(
             ) {
                 FormatBar({ op -> act(op) }, { pickImg.launch("image/*") }, Modifier.weight(1f))
                 IconGroup(onUndo, onRedo, onFind)
+                if (imeOpen) IconBtn("check", "Hide keyboard") { hideKeyboard() }
             }
             Box(Modifier.fillMaxWidth().weight(1f).padding(horizontal = 12.dp, vertical = 8.dp)) {
                 if (fsMode == 2) {
@@ -525,10 +559,8 @@ fun EditorScreen(
                         placeholder = { Text("Write here...") },
                         shape = RoundedCornerShape(16.dp), colors = fieldColors()
                     )
-                } else if (focus != null && pg != null && ectx != null) {
-                    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
-                        PageEditCell(pg!!, focus, ectx)
-                    }
+                } else if (focus != null && pgNow != null && ectx != null) {
+                    PageEditCell(pgNow, focus, ectx, tall = true, modifier = Modifier.fillMaxSize())
                 } else if (fsMode == 0) {
                     PagesArea(pg, 2, active, ectx, { i -> if (selectPage(i)) fsFocus = i }, Modifier.fillMaxSize())
                 } else {
